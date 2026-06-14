@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Japanese Trainer</title>
+<style>
+  :root {
+    --bg: #1a1a2e;
+    --surface: #16213e;
+    --card: #0f3460;
+    --accent: #e94560;
+    --accent2: #f5a623;
+    --text: #eaeaea;
+    --muted: #888;
+    --green: #4caf50;
+    --yellow: #ff9800;
+    --red: #f44336;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px;
+  }
+
+  header {
+    width: 100%;
+    max-width: 640px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+  }
+
+  h1 { font-size: 1.4rem; color: var(--accent); }
+
+  #stats { font-size: 0.85rem; color: var(--muted); }
+
+  #category-filter {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    max-width: 640px;
+    width: 100%;
+    margin-bottom: 20px;
+  }
+
+  .cat-btn {
+    padding: 5px 12px;
+    border-radius: 20px;
+    border: 1px solid var(--muted);
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    font-size: 0.8rem;
+    transition: all 0.2s;
+  }
+
+  .cat-btn.active {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: rgba(233,69,96,0.1);
+  }
+
+  #progress-bar-wrap {
+    width: 100%;
+    max-width: 640px;
+    height: 4px;
+    background: var(--surface);
+    border-radius: 2px;
+    margin-bottom: 24px;
+  }
+
+  #progress-bar {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 2px;
+    transition: width 0.3s;
+  }
+
+  /* Card flip */
+  .scene {
+    width: 100%;
+    max-width: 640px;
+    height: 280px;
+    perspective: 1000px;
+    cursor: pointer;
+    margin-bottom: 24px;
+  }
+
+  .card {
+    width: 100%;
+    height: 100%;
+    position: relative;
+    transform-style: preserve-3d;
+    transition: transform 0.5s;
+  }
+
+  .card.flipped { transform: rotateY(180deg); }
+
+  .card-face {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    backface-visibility: hidden;
+    border-radius: 16px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 32px;
+    text-align: center;
+  }
+
+  .card-front {
+    background: var(--card);
+    border: 1px solid rgba(255,255,255,0.08);
+  }
+
+  .card-back {
+    background: var(--surface);
+    border: 1px solid var(--accent);
+    transform: rotateY(180deg);
+  }
+
+  .card-category {
+    font-size: 0.75rem;
+    color: var(--accent);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 16px;
+  }
+
+  .card-german {
+    font-size: 1.4rem;
+    font-weight: 600;
+    line-height: 1.4;
+    color: var(--text);
+  }
+
+  .card-hint {
+    margin-top: 16px;
+    font-size: 0.8rem;
+    color: var(--muted);
+  }
+
+  .card-japanese {
+    font-size: 1.6rem;
+    font-weight: 600;
+    line-height: 1.4;
+    color: var(--text);
+    margin-bottom: 12px;
+  }
+
+  .card-romaji {
+    font-size: 1rem;
+    color: var(--accent2);
+    font-style: italic;
+    margin-bottom: 4px;
+    display: none;
+  }
+
+  #btn-romaji {
+    margin-top: 12px;
+    padding: 6px 16px;
+    border-radius: 20px;
+    border: 1px solid var(--muted);
+    background: transparent;
+    color: var(--muted);
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  #btn-romaji:hover {
+    border-color: var(--accent2);
+    color: var(--accent2);
+  }
+
+  .card-german-small {
+    font-size: 0.85rem;
+    color: var(--muted);
+    margin-top: 8px;
+  }
+
+  #buttons {
+    display: flex;
+    gap: 12px;
+    max-width: 640px;
+    width: 100%;
+    justify-content: center;
+  }
+
+  .btn {
+    flex: 1;
+    max-width: 180px;
+    padding: 14px 20px;
+    border-radius: 12px;
+    border: none;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .btn.visible { opacity: 1; pointer-events: all; }
+
+  #btn-hard { background: var(--red); color: white; }
+  #btn-ok   { background: var(--yellow); color: #222; }
+  #btn-easy { background: var(--green); color: white; }
+
+  .btn:hover { filter: brightness(1.15); transform: translateY(-1px); }
+
+  #empty-state, #loading {
+    color: var(--muted);
+    margin-top: 80px;
+    font-size: 1.1rem;
+  }
+
+  #done-state {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    margin-top: 60px;
+    text-align: center;
+  }
+
+  #done-state h2 { color: var(--accent2); font-size: 1.6rem; }
+  #done-state p  { color: var(--muted); }
+
+  #btn-restart {
+    padding: 12px 28px;
+    border-radius: 12px;
+    border: none;
+    background: var(--accent);
+    color: white;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  #counter {
+    font-size: 0.85rem;
+    color: var(--muted);
+    margin-top: -16px;
+    margin-bottom: 4px;
+    align-self: flex-end;
+    max-width: 640px;
+    width: 100%;
+    text-align: right;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🇯🇵 Japanese Trainer</h1>
+  <span id="stats"></span>
+</header>
+
+<div id="category-filter"></div>
+
+<div id="progress-bar-wrap"><div id="progress-bar" style="width:0%"></div></div>
+
+<div id="loading">Lade Karten…</div>
+
+<div id="main" style="display:none; flex-direction:column; align-items:center; width:100%; max-width:640px;">
+  <div id="counter"></div>
+  <div class="scene" id="scene" onclick="flipCard()">
+    <div class="card" id="card">
+      <div class="card-face card-front">
+        <div class="card-category" id="front-category"></div>
+        <div class="card-german" id="front-german"></div>
+        <div class="card-hint">Tippe zum Aufdecken</div>
+      </div>
+      <div class="card-face card-back">
+        <div class="card-category" id="back-category"></div>
+        <div class="card-japanese" id="back-japanese"></div>
+        <div class="card-romaji" id="back-romaji"></div>
+        <button id="btn-romaji" onclick="event.stopPropagation(); toggleRomaji()">Romaji anzeigen</button>
+        <div class="card-german-small" id="back-german"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="buttons">
+    <button class="btn" id="btn-hard" onclick="answer(0)">Nochmal</button>
+    <button class="btn" id="btn-ok"   onclick="answer(3)">Gut</button>
+    <button class="btn" id="btn-easy" onclick="answer(5)">Leicht</button>
+  </div>
+
+  <div id="done-state">
+    <h2>🎉 Alles geschafft!</h2>
+    <p id="done-text"></p>
+    <button id="btn-restart" onclick="restart()">Nochmal</button>
+  </div>
+</div>
+
+<script>
+// ── SM-2 ──────────────────────────────────────────────────────────────────────
+function sm2(card, quality) {
+  // quality: 0=fail, 3=good, 5=perfect
+  let { n = 0, ef = 2.5, interval = 1, nextDue = 0 } = card;
+  if (quality >= 3) {
+    if (n === 0) interval = 1;
+    else if (n === 1) interval = 6;
+    else interval = Math.round(interval * ef);
+    n++;
+  } else {
+    n = 0; interval = 1;
+  }
+  ef = Math.max(1.3, ef + 0.1 - (5 - quality) * (0.08 + (5 - quality) * 0.02));
+  nextDue = Date.now() + interval * 86400000;
+  return { n, ef, interval, nextDue };
+}
+
+// ── Parse cards.md ────────────────────────────────────────────────────────────
+function hasJapanese(str) {
+  return /[　-鿿＀-￯]/.test(str);
+}
+
+function parseCards(text) {
+  const lines = text.split('\n').map(l => l.trim()).filter(l => l && !l.startsWith('#'));
+  const cards = [];
+  let currentCategory = 'Allgemein';
+
+  for (const line of lines) {
+    if (!hasJapanese(line)) {
+      // Could be a category header if short-ish and no Japanese
+      if (line.length < 60) currentCategory = line;
+      continue;
+    }
+
+    // Find first Japanese character position
+    const match = line.match(/[　-鿿＀-￯゠-ヿ぀-ゟ]/);
+    if (!match) continue;
+
+    const splitIdx = match.index;
+    let german = line.slice(0, splitIdx).trim().replace(/[-–]$/, '').trim();
+    let rest = line.slice(splitIdx).trim();
+
+    // Extract romaji from parentheses at end
+    let romaji = '';
+    const romajiMatch = rest.match(/\(([^（）぀-鿿]+)\)\s*$/);
+    if (romajiMatch) {
+      romaji = romajiMatch[1].trim();
+      rest = rest.slice(0, romajiMatch.index).trim();
+    }
+
+    // Clean trailing punctuation from japanese
+    const japanese = rest.trim();
+
+    if (german && japanese) {
+      cards.push({ id: `${currentCategory}::${german}`, category: currentCategory, german, japanese, romaji });
+    }
+  }
+  return cards;
+}
+
+// ── State ─────────────────────────────────────────────────────────────────────
+const STORAGE_KEY = 'jptrainer_v1';
+let allCards = [];
+let queue = [];
+let current = null;
+let flipped = false;
+let activeCategories = new Set();
+let progress = {};
+
+function loadProgress() {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || {}; } catch { return {}; }
+}
+
+function saveProgress() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(progress));
+}
+
+// ── Queue ─────────────────────────────────────────────────────────────────────
+function buildQueue() {
+  const now = Date.now();
+  const filtered = allCards.filter(c => activeCategories.size === 0 || activeCategories.has(c.category));
+  // Due cards first, then new cards
+  const due = filtered.filter(c => {
+    const p = progress[c.id];
+    return p && p.nextDue <= now;
+  });
+  const fresh = filtered.filter(c => !progress[c.id]);
+  queue = [...shuffle(due), ...shuffle(fresh)];
+}
+
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+// ── UI ────────────────────────────────────────────────────────────────────────
+function showCard(card) {
+  current = card;
+  flipped = false;
+  document.getElementById('card').classList.remove('flipped');
+  document.getElementById('front-category').textContent = card.category;
+  document.getElementById('front-german').textContent = card.german;
+  document.getElementById('back-category').textContent = card.category;
+  document.getElementById('back-japanese').textContent = card.japanese;
+  const romajiEl = document.getElementById('back-romaji');
+  romajiEl.textContent = card.romaji;
+  romajiEl.dataset.hasRomaji = card.romaji ? '1' : '0';
+  document.getElementById('back-german').textContent = card.german;
+  document.querySelectorAll('.btn').forEach(b => b.classList.remove('visible'));
+  document.getElementById('done-state').style.display = 'none';
+  document.getElementById('scene').style.display = '';
+
+  const idx = allCards.filter(c => activeCategories.size === 0 || activeCategories.has(c.category)).indexOf(card);
+  const total = allCards.filter(c => activeCategories.size === 0 || activeCategories.has(c.category)).length;
+  const pos = total - queue.length;
+  document.getElementById('counter').textContent = `${pos} / ${total}`;
+
+  updateProgress();
+}
+
+function flipCard() {
+  if (!current) return;
+  flipped = !flipped;
+  document.getElementById('card').classList.toggle('flipped', flipped);
+  if (flipped) {
+    document.querySelectorAll('.btn').forEach(b => b.classList.add('visible'));
+    resetRomaji();
+  }
+}
+
+function resetRomaji() {
+  document.getElementById('back-romaji').style.display = 'none';
+  const btn = document.getElementById('btn-romaji');
+  btn.textContent = 'Romaji anzeigen';
+  btn.style.display = document.getElementById('back-romaji').dataset.hasRomaji === '1' ? '' : 'none';
+}
+
+function toggleRomaji() {
+  const el = document.getElementById('back-romaji');
+  const btn = document.getElementById('btn-romaji');
+  const visible = el.style.display !== 'none';
+  el.style.display = visible ? 'none' : 'block';
+  btn.textContent = visible ? 'Romaji anzeigen' : 'Romaji verbergen';
+}
+
+function answer(quality) {
+  if (!current) return;
+  progress[current.id] = sm2(progress[current.id] || {}, quality);
+  saveProgress();
+  next();
+}
+
+function next() {
+  queue.shift();
+  if (queue.length === 0) {
+    showDone();
+  } else {
+    showCard(queue[0]);
+  }
+}
+
+function showDone() {
+  document.getElementById('scene').style.display = 'none';
+  document.querySelectorAll('.btn').forEach(b => b.classList.remove('visible'));
+  const ds = document.getElementById('done-state');
+  ds.style.display = 'flex';
+  const learned = Object.keys(progress).length;
+  document.getElementById('done-text').textContent =
+    `Du hast ${learned} Karten gelernt. Schau morgen wieder vorbei!`;
+  updateProgress();
+}
+
+function restart() {
+  buildQueue();
+  if (queue.length > 0) showCard(queue[0]);
+}
+
+function updateProgress() {
+  const total = allCards.filter(c => activeCategories.size === 0 || activeCategories.has(c.category)).length;
+  const learned = Object.values(progress).filter(p => p.n > 0).length;
+  const pct = total > 0 ? Math.round((learned / total) * 100) : 0;
+  document.getElementById('progress-bar').style.width = pct + '%';
+  document.getElementById('stats').textContent = `${learned}/${total} gelernt`;
+}
+
+function renderCategoryFilter(categories) {
+  const wrap = document.getElementById('category-filter');
+  wrap.innerHTML = '';
+
+  const allBtn = document.createElement('button');
+  allBtn.className = 'cat-btn active';
+  allBtn.textContent = 'Alle';
+  allBtn.onclick = () => {
+    activeCategories.clear();
+    document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
+    allBtn.classList.add('active');
+    restart();
+  };
+  wrap.appendChild(allBtn);
+
+  categories.forEach(cat => {
+    const btn = document.createElement('button');
+    btn.className = 'cat-btn';
+    btn.textContent = cat;
+    btn.onclick = () => {
+      if (activeCategories.has(cat)) {
+        activeCategories.delete(cat);
+        btn.classList.remove('active');
+      } else {
+        activeCategories.add(cat);
+        btn.classList.add('active');
+        document.querySelector('.cat-btn').classList.remove('active'); // deactivate "Alle"
+      }
+      if (activeCategories.size === 0) document.querySelector('.cat-btn').classList.add('active');
+      restart();
+    };
+    wrap.appendChild(btn);
+  });
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+async function init() {
+  progress = loadProgress();
+
+  // Try fetching from GitHub Pages same-origin, fallback to raw GitHub
+  const urls = [
+    './cards.md',
+    'https://raw.githubusercontent.com/heydot/japanese_trainer/main/cards.md'
+  ];
+
+  let text = null;
+  for (const url of urls) {
+    try {
+      const res = await fetch(url);
+      if (res.ok) { text = await res.text(); break; }
+    } catch {}
+  }
+
+  document.getElementById('loading').style.display = 'none';
+
+  if (!text) {
+    document.getElementById('loading').style.display = '';
+    document.getElementById('loading').textContent = 'Fehler: cards.md konnte nicht geladen werden.';
+    return;
+  }
+
+  allCards = parseCards(text);
+  const categories = [...new Set(allCards.map(c => c.category))];
+  renderCategoryFilter(categories);
+  buildQueue();
+  document.getElementById('main').style.display = 'flex';
+
+  if (queue.length > 0) showCard(queue[0]);
+  else showDone();
+}
+
+init();
+</script>
+</body>
+</html>
